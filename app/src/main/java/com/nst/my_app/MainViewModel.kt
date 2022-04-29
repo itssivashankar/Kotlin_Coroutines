@@ -1,0 +1,37 @@
+package com.nst.my_app
+
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.*
+
+class MainViewModel constructor(private val mainRepository: MainRepository) : ViewModel(){
+    val errorMessage = MutableLiveData<String>()
+    val movieList = MutableLiveData<List<Movie>>()
+    var job : Job? = null
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        onError("Exception handled: ${throwable.localizedMessage}")
+    }
+    val loading = MutableLiveData<Boolean>()
+    fun getAllMovies(){
+        job = CoroutineScope(Dispatchers.IO+exceptionHandler).launch {
+            loading.postValue(true)
+            val responce = mainRepository.getAllMovies()
+            if(responce.isSuccessful){
+                movieList.postValue(responce.body())
+//                loading.value = false
+            }else{
+                onError("Error : ${ responce.message()}")
+            }
+        }
+    }
+    private fun onError(message : String){
+        errorMessage.value = "Error Message"
+        loading.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        job?.cancel()
+    }
+
+}
